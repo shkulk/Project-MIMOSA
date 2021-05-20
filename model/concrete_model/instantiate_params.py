@@ -159,6 +159,7 @@ class InstantiatedModel:
             "dk": V(params["economics"]["GDP"]["depreciation of capital"]),
             "sr": V(params["economics"]["GDP"]["savings rate"]),
             "elasmu": V(params["economics"]["elasmu"]),
+            "disutility_dmg_factor": V(params["economics"]["disutility_dmg_factor"]),
             "PRTP": V(params["economics"]["PRTP"]),
             "allow_trade": V(params["model"]["allow trade"]),
         }

@@ -49,11 +49,16 @@ def get_constraints(m: AbstractModel) -> Sequence[GeneralConstraint]:
     m.sr = Param()
     m.elasmu = Param()
 
+    m.disutility_dmg_factor = Param()
+
     m.GDP_gross = Var(m.t, m.regions, initialize=lambda m, t, r: m.GDP(m.year(0), r))
     m.GDP_net = Var(m.t, m.regions)
     m.investments = Var(m.t, m.regions)
     m.consumption = Var(m.t, m.regions)
     m.utility = Var(m.t, m.regions)
+    m.GDP_less_mit = Var(m.t, m.regions)
+    m.utility_less_mit = Var(m.t, m.regions)
+    m.utility_original = Var(m.t, m.regions)
 
     m.ignore_damages = Param()
 
@@ -70,13 +75,20 @@ def get_constraints(m: AbstractModel) -> Sequence[GeneralConstraint]:
                 ),
                 "GDP_gross",
             ),
-            RegionalConstraint(
+            RegionalConstraint( # GDP net
                 lambda m, t, r: m.GDP_net[t, r]
                 == m.GDP_gross[t, r]
                 * (1 - (m.damage_costs[t, r] if not value(m.ignore_damages) else 0))
                 - m.abatement_costs[t, r],
                 "GDP_net",
             ),
+            RegionalConstraint( # GDP less mitigation alone
+                lambda m, t, r: m.GDP_less_mit[t, r]
+                == m.GDP_gross[t, r] - m.abatement_costs[t, r],
+                "GDP_less_mit",
+            ),
+
+
             RegionalConstraint(
                 lambda m, t, r: m.investments[t, r] == m.sr * m.GDP_net[t, r],
                 "investments",
@@ -85,11 +97,25 @@ def get_constraints(m: AbstractModel) -> Sequence[GeneralConstraint]:
                 lambda m, t, r: m.consumption[t, r] == (1 - m.sr) * m.GDP_net[t, r],
                 "consumption",
             ),
+            
+            RegionalConstraint(
+                lambda m, t, r: m.utility_less_mit[t, r]
+                == calc_utility((1- m.sr)* m.GDP_less_mit[t,r], m.L(m.year(t), r), m.elasmu),
+                "utility_less_mitigation_costs",
+            ),
+
+            RegionalConstraint(
+                lambda m, t, r: m.utility_original[t, r]
+                == calc_utility(m.consumption[t, r], m.L(m.year(t), r), m.elasmu),
+                "utility_original",
+            ),
+
             RegionalConstraint(
                 lambda m, t, r: m.utility[t, r]
-                == calc_utility(m.consumption[t, r], m.L(m.year(t), r), m.elasmu),
+                == m.utility_less_mit[t,r] - m.disutility_dmg_factor *(m.utility_less_mit[t,r] - m.utility_original[t,r]),
                 "utility",
             ),
+
             RegionalConstraint(
                 lambda m, t, r: (
                     m.capital_stock[t, r]
@@ -103,6 +129,7 @@ def get_constraints(m: AbstractModel) -> Sequence[GeneralConstraint]:
                 else Constraint.Skip,
                 "capital_stock",
             ),
+
             RegionalInitConstraint(
                 lambda m, r: m.capital_stock[0, r]
                 == m.init_capitalstock_factor[r] * m.GDP(m.year(0), r)

@@ -36,7 +36,7 @@ def save_output(params, m, experiment=None, random_id=False, folder="output"):
     # add_param_columns(df, params, id, experiment)
 
     # 3. Save the CSV file
-    os.makedirs(folder + "/", exist_ok=True)
+    #os.makedirs(folder + "/", exist_ok=True)
     filename = f"{exp_id}" if experiment is None else f"{experiment}_{exp_id}"
 
     dataframe.to_csv(f"{folder}/{filename}.csv", float_format="%.6g", index=False)
